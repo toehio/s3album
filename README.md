@@ -17,20 +17,20 @@ Being a pure web-app means:
 
 ## Getting Started
 
-1. Upload `album.html`, `admin.html` and `admin.js` to a path in
+1. Upload `album.html`, `publish.html` and `admin.js` to a path in
 your S3 bucket, for example, `public-albums/`. This can be done with
 [s3cmd](https://github.com/s3tools/s3cmd):
 ```bash
-s3cmd put album.html admin.html admin.js s3://bucket/public-albums/
+s3cmd put album.html publish.html admin.js s3://bucket/public-albums/
 ```
 
-2. In your browser, navigate to `https://domain.of.bucket/public-albums/admin.html`,
+2. In your browser, navigate to `https://domain.of.bucket/public-albums/publish.html`,
    enter your S3 credentials, and start publishing albums!
 
 ## How It Works
 
 ##### Publishing
-`admin.html` uses the Amazon JavaScript SDK to browse your bucket for
+`publish.html` uses the Amazon JavaScript SDK to browse your bucket for
 photos you would like to publish in an album. When you create a new
 album, a directory in your published albums path is created. For
 example, the album with name 'My Holiday Pics' is created in
@@ -208,7 +208,7 @@ resize and upload the photo/thumb to the bucket.
 - [x] Automatically detect settings (bucket name, paths, etc.)
 - [ ] Choose photo and thumb sizes in settings dialog
 - [ ] Resize images in the browser without introducing artifacts.
-- [ ] Upload images directly from `admin.html`
+- [ ] Upload images directly from `publish.html`
 - [ ] Generate thumbnails for the bucket file browser
 - [ ] Select multiple files to add at the same time
 - [ ] Filter selectable file types
