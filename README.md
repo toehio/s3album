@@ -20,9 +20,9 @@ Being a pure web-app means:
 1. Upload `album.html`, `publish.html` and `admin.js` to a path in
 your S3 bucket, for example, `public-albums/`. This can be done with
 [s3cmd](https://github.com/s3tools/s3cmd):
-   ```bash
-   s3cmd put album.html publish.html admin.js s3://bucket/public-albums/
-   ```
+```bash
+s3cmd put album.html publish.html admin.js s3://bucket/public-albums/
+```
 2. In your browser, navigate to `https://domain.of.bucket/public-albums/publish.html`,
    enter your S3 credentials, and start publishing albums!
 
