@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    <meta charset="UTF-8">
+    <title>S3album by toehio</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" type="text/css" href="stylesheets/normalize.css" media="screen">
+    <link href='https://fonts.googleapis.com/css?family=Open+Sans:400,700' rel='stylesheet' type='text/css'>
+    <link rel="stylesheet" type="text/css" href="stylesheets/stylesheet.css" media="screen">
+    <link rel="stylesheet" type="text/css" href="stylesheets/github-light.css" media="screen">
+  </head>
+  <body>
+    <section class="page-header">
+      <h1 class="project-name">S3album</h1>
+      <h2 class="project-tagline">A pure client-side photo album (gallery) publisher for S3.</h2>
+      <a href="https://github.com/toehio/s3album" class="btn">View on GitHub</a>
+      <a href="https://github.com/toehio/s3album/zipball/master" class="btn">Download .zip</a>
+      <a href="https://github.com/toehio/s3album/tarball/master" class="btn">Download .tar.gz</a>
+    </section>
+
+    <section class="main-content">
+      <h1>
+<a id="s3-album-publisher" class="anchor" href="#s3-album-publisher" aria-hidden="true"><span class="octicon octicon-link"></span></a>S3 Album Publisher</h1>
+
+<p>A pure client-side photo album publisher for S3.</p>
+
+<h2>
+<a id="overview" class="anchor" href="#overview" aria-hidden="true"><span class="octicon octicon-link"></span></a>Overview</h2>
+
+<ul>
+<li>
+<b>Browse</b> your bucket for photos.</li>
+<li>
+<b>Publish</b> albums from your photos.</li>
+<li>
+<b>Share</b> albums with their public URL.</li>
+</ul>
+
+<p>The albums you publish are <b>private</b>: they can only be found if you
+know the album's URL.</p>
+
+<p>Being a pure web-app means:</p>
+
+<ul>
+<li>
+<b>Configuration-free:</b> upload the scripts to S3 and start publishing albums right away.</li>
+<li>
+<b>Database-free:</b> no database is required for creating or viewing albums. Albums are self contained and portable.</li>
+<li>
+<b>No server-side scripts</b>: all the operations are done in your
+browser, including resizing photos and thumbnails.</li>
+</ul>
+
+<h2>
+<a id="getting-started" class="anchor" href="#getting-started" aria-hidden="true"><span class="octicon octicon-link"></span></a>Getting Started</h2>
+
+<ol>
+<li>Upload <code>album.html</code>, <code>publish.html</code> and <code>admin.js</code> to a path in
+your S3 bucket, for example, <code>public-albums/</code>. This can be done with
+<a href="https://github.com/s3tools/s3cmd">s3cmd</a>:</li>
+</ol>
+
+<div class="highlight highlight-source-shell"><pre>s3cmd put album.html publish.html admin.js s3://bucket/public-albums/</pre></div>
+
+<ol>
+<li>In your browser, navigate to <code>https://domain.of.bucket/public-albums/publish.html</code>,
+enter your S3 credentials, and start publishing albums!</li>
+</ol>
+
+<h2>
+<a id="how-it-works" class="anchor" href="#how-it-works" aria-hidden="true"><span class="octicon octicon-link"></span></a>How It Works</h2>
+
+<h5>
+<a id="publishing" class="anchor" href="#publishing" aria-hidden="true"><span class="octicon octicon-link"></span></a>Publishing</h5>
+
+<p><code>publish.html</code> uses the Amazon JavaScript SDK to browse your bucket for
+photos you would like to publish in an album. When you create a new
+album, a directory in your published albums path is created. For
+example, the album with name 'My Holiday Pics' is created in
+<code>public-albums/albums/My Holiday Pics/</code>. When you add a photo to the
+album:</p>
+
+<ul>
+<li>it is copied, resized, and placed in <code>public-albums/albums/My Holiday Pics/photos/</code>; and</li>
+<li>a thumbnail is created and placed in <code>public-albums/albums/My Holiday Pics/thumbs/</code>.</li>
+</ul>
+
+<p>That's all there is to publishing. No databases. No calls to server-side
+scripts. No adding filenames to index files.</p>
+
+<h5>
+<a id="viewing" class="anchor" href="#viewing" aria-hidden="true"><span class="octicon octicon-link"></span></a>Viewing</h5>
+
+<p><code>album.html</code> is used to view published albums. The name of the album is
+specified in the hash of the URL, for example,
+<code>https://domain.of.bucket/public-albums/album.html#My Holiday
+Pics</code>.  The photos for the album are found by listing the contents of
+<code>albums/My Holiday Pics/photos/</code> (relative to the location of
+<code>album.html</code>) and then dynamically added to the page.</p>
+
+<h2>
+<a id="s3-bucket-policy" class="anchor" href="#s3-bucket-policy" aria-hidden="true"><span class="octicon octicon-link"></span></a>S3 Bucket Policy</h2>
+
+<h4>
+<a id="anonymous-access" class="anchor" href="#anonymous-access" aria-hidden="true"><span class="octicon octicon-link"></span></a>Anonymous access</h4>
+
+<p>If you want anyone on the web to view your published albums, your bucket
+policy should allow anonymous <i>getObject</i> and <i>listBucket</i>
+requests. If your bucket doesn't already allow anonymous requests, the
+mimimum you need to add is:</p>
+
+<ul>
+<li>A statement allowing aonymous <i>getObject</i> requests to the
+path of your published albums, for example <code>public-albums/</code>:</li>
+</ul>
+
+<div class="highlight highlight-source-js"><pre>{
+  <span class="pl-s"><span class="pl-pds">"</span>Sid<span class="pl-pds">"</span></span><span class="pl-k">:</span> <span class="pl-s"><span class="pl-pds">"</span>AnonGetAlbumObjects<span class="pl-pds">"</span></span>,
+  <span class="pl-s"><span class="pl-pds">"</span>Effect<span class="pl-pds">"</span></span><span class="pl-k">:</span> <span class="pl-s"><span class="pl-pds">"</span>Allow<span class="pl-pds">"</span></span>,
+  <span class="pl-s"><span class="pl-pds">"</span>Principal<span class="pl-pds">"</span></span><span class="pl-k">:</span> <span class="pl-s"><span class="pl-pds">"</span>*<span class="pl-pds">"</span></span>,
+  <span class="pl-s"><span class="pl-pds">"</span>Action<span class="pl-pds">"</span></span><span class="pl-k">:</span> <span class="pl-s"><span class="pl-pds">"</span>s3:GetObject<span class="pl-pds">"</span></span>,
+  <span class="pl-s"><span class="pl-pds">"</span>Resource<span class="pl-pds">"</span></span><span class="pl-k">:</span> [
+    <span class="pl-s"><span class="pl-pds">"</span>arn:aws:s3:::bucket/public-albums/*<span class="pl-pds">"</span></span>,
+    <span class="pl-s"><span class="pl-pds">"</span>arn:aws:s3:::bucket/favicon.ico<span class="pl-pds">"</span></span>
+  ]
+},</pre></div>
+
+<ul>
+<li>A statement allowing anyone to list the contents of the individual
+album directories (but not list all the albums that you have):</li>
+</ul>
+
+<div class="highlight highlight-source-js"><pre>{
+  <span class="pl-s"><span class="pl-pds">"</span>Sid<span class="pl-pds">"</span></span><span class="pl-k">:</span> <span class="pl-s"><span class="pl-pds">"</span>AnonListObjects<span class="pl-pds">"</span></span>,
+  <span class="pl-s"><span class="pl-pds">"</span>Effect<span class="pl-pds">"</span></span><span class="pl-k">:</span> <span class="pl-s"><span class="pl-pds">"</span>Allow<span class="pl-pds">"</span></span>,
+  <span class="pl-s"><span class="pl-pds">"</span>Principal<span class="pl-pds">"</span></span><span class="pl-k">:</span> <span class="pl-s"><span class="pl-pds">"</span>*<span class="pl-pds">"</span></span>,
+  <span class="pl-s"><span class="pl-pds">"</span>Action<span class="pl-pds">"</span></span><span class="pl-k">:</span> <span class="pl-s"><span class="pl-pds">"</span>s3:ListBucket<span class="pl-pds">"</span></span>,
+  <span class="pl-s"><span class="pl-pds">"</span>Resource<span class="pl-pds">"</span></span><span class="pl-k">:</span> <span class="pl-s"><span class="pl-pds">"</span>arn:aws:s3:::bucket<span class="pl-pds">"</span></span>,
+  <span class="pl-s"><span class="pl-pds">"</span>Condition<span class="pl-pds">"</span></span><span class="pl-k">:</span> {
+    <span class="pl-s"><span class="pl-pds">"</span>StringLike<span class="pl-pds">"</span></span><span class="pl-k">:</span> {
+      <span class="pl-s"><span class="pl-pds">"</span>s3:prefix<span class="pl-pds">"</span></span><span class="pl-k">:</span> <span class="pl-s"><span class="pl-pds">"</span>public-albums/albums/*/<span class="pl-pds">"</span></span>
+    }
+  }
+},</pre></div>
+
+<h4>
+<a id="s3-user" class="anchor" href="#s3-user" aria-hidden="true"><span class="octicon octicon-link"></span></a>S3 user</h4>
+
+<p>The S3 user (also called principal) that you use to publish the albums
+should have permission to:</p>
+
+<ul>
+<li>read and list the paths where the original photos are stored; and</li>
+<li>read, list and write the path where the albums are published to,
+again, for example, <code>public-albums/</code>.</li>
+</ul>
+
+<p>If your user has all permisions on the whole bucket, then no changes to
+the bucket policy are necessary. However, if you want to restrict your
+user to the minimum permisions necessary, add the following statements:</p>
+
+<ul>
+<li>Grant permission to read (but not write) the paths where the original
+photos are stored:</li>
+</ul>
+
+<div class="highlight highlight-source-js"><pre>{
+  <span class="pl-s"><span class="pl-pds">"</span>Sid<span class="pl-pds">"</span></span><span class="pl-k">:</span> <span class="pl-s"><span class="pl-pds">"</span>ReadMyPhotosDir<span class="pl-pds">"</span></span>,
+  <span class="pl-s"><span class="pl-pds">"</span>Effect<span class="pl-pds">"</span></span><span class="pl-k">:</span> <span class="pl-s"><span class="pl-pds">"</span>Allow<span class="pl-pds">"</span></span>,
+  <span class="pl-s"><span class="pl-pds">"</span>Principal<span class="pl-pds">"</span></span><span class="pl-k">:</span> {
+    <span class="pl-s"><span class="pl-pds">"</span>AWS<span class="pl-pds">"</span></span><span class="pl-k">:</span> <span class="pl-s"><span class="pl-pds">"</span>arn:aws:iam::1234567890:user/my_albums_user<span class="pl-pds">"</span></span>
+  },
+  <span class="pl-s"><span class="pl-pds">"</span>Action<span class="pl-pds">"</span></span><span class="pl-k">:</span> <span class="pl-s"><span class="pl-pds">"</span>s3:GetObject<span class="pl-pds">"</span></span>,
+  <span class="pl-s"><span class="pl-pds">"</span>Resource<span class="pl-pds">"</span></span><span class="pl-k">:</span> <span class="pl-s"><span class="pl-pds">"</span>arn:aws:s3:::bucket/my/photo/collection/*<span class="pl-pds">"</span></span>
+}</pre></div>
+
+<ul>
+<li>Permission to list the paths where the original photos are stored, as
+well as the published albums:</li>
+</ul>
+
+<div class="highlight highlight-source-js"><pre>{
+  <span class="pl-s"><span class="pl-pds">"</span>Sid<span class="pl-pds">"</span></span><span class="pl-k">:</span> <span class="pl-s"><span class="pl-pds">"</span>OnlyListSomeDirs<span class="pl-pds">"</span></span>,
+  <span class="pl-s"><span class="pl-pds">"</span>Effect<span class="pl-pds">"</span></span><span class="pl-k">:</span> <span class="pl-s"><span class="pl-pds">"</span>Allow<span class="pl-pds">"</span></span>,
+  <span class="pl-s"><span class="pl-pds">"</span>Principal<span class="pl-pds">"</span></span><span class="pl-k">:</span> {
+    <span class="pl-s"><span class="pl-pds">"</span>AWS<span class="pl-pds">"</span></span><span class="pl-k">:</span> <span class="pl-s"><span class="pl-pds">"</span>arn:aws:iam::1234567890:user/my_albums_user<span class="pl-pds">"</span></span>
+  },
+  <span class="pl-s"><span class="pl-pds">"</span>Action<span class="pl-pds">"</span></span><span class="pl-k">:</span> <span class="pl-s"><span class="pl-pds">"</span>s3:ListBucket<span class="pl-pds">"</span></span>,
+  <span class="pl-s"><span class="pl-pds">"</span>Resource<span class="pl-pds">"</span></span><span class="pl-k">:</span> <span class="pl-s"><span class="pl-pds">"</span>arn:aws:s3:::bucket<span class="pl-pds">"</span></span>,
+  <span class="pl-s"><span class="pl-pds">"</span>Condition<span class="pl-pds">"</span></span><span class="pl-k">:</span> {
+    <span class="pl-s"><span class="pl-pds">"</span>StringLike<span class="pl-pds">"</span></span><span class="pl-k">:</span> {
+      <span class="pl-s"><span class="pl-pds">"</span>s3:prefix<span class="pl-pds">"</span></span><span class="pl-k">:</span> [
+        <span class="pl-s"><span class="pl-pds">"</span>my/photo/collection/*<span class="pl-pds">"</span></span>,
+      <span class="pl-s"><span class="pl-pds">"</span>public-albums/*<span class="pl-pds">"</span></span>
+      ]
+    }
+  }
+},</pre></div>
+
+<ul>
+<li>Finally, the user should have full control over the directory where
+the published albums are stored:</li>
+</ul>
+
+<div class="highlight highlight-source-js"><pre>{
+  <span class="pl-s"><span class="pl-pds">"</span>Sid<span class="pl-pds">"</span></span><span class="pl-k">:</span> <span class="pl-s"><span class="pl-pds">"</span>ObjectActionsOnAlbumsDir<span class="pl-pds">"</span></span>,
+  <span class="pl-s"><span class="pl-pds">"</span>Effect<span class="pl-pds">"</span></span><span class="pl-k">:</span> <span class="pl-s"><span class="pl-pds">"</span>Allow<span class="pl-pds">"</span></span>,
+  <span class="pl-s"><span class="pl-pds">"</span>Principal<span class="pl-pds">"</span></span><span class="pl-k">:</span> {
+    <span class="pl-s"><span class="pl-pds">"</span>AWS<span class="pl-pds">"</span></span><span class="pl-k">:</span> <span class="pl-s"><span class="pl-pds">"</span>arn:aws:iam::1234567890:user/my_albums_user<span class="pl-pds">"</span></span>
+  },
+  <span class="pl-s"><span class="pl-pds">"</span>Action<span class="pl-pds">"</span></span><span class="pl-k">:</span> <span class="pl-s"><span class="pl-pds">"</span>s3:*<span class="pl-pds">"</span></span>,
+  <span class="pl-s"><span class="pl-pds">"</span>Resource<span class="pl-pds">"</span></span><span class="pl-k">:</span> [
+    <span class="pl-s"><span class="pl-pds">"</span>arn:aws:s3:::bucket/public-albums/*<span class="pl-pds">"</span></span>,
+  <span class="pl-s"><span class="pl-pds">"</span>arn:aws:s3:::bucket/public-albums<span class="pl-pds">"</span></span>
+  ]
+},</pre></div>
+
+<h2>
+<a id="custom-install" class="anchor" href="#custom-install" aria-hidden="true"><span class="octicon octicon-link"></span></a>Custom install</h2>
+
+<p>It is also possible to store the albums in your bucket, but keep the
+<code>album.html</code> on another website. To do this, you can edit the
+configuration in <code>album.html</code> to point to your S3 bucket. Also, you will
+need to ensure the CORS configuration for your bucket allows requests
+from different origins:</p>
+
+<div class="highlight highlight-text-xml"><pre>&lt;?<span class="pl-ent">xml</span><span class="pl-e"> version</span>=<span class="pl-s"><span class="pl-pds">"</span>1.0<span class="pl-pds">"</span></span><span class="pl-e"> encoding</span>=<span class="pl-s"><span class="pl-pds">"</span>UTF-8<span class="pl-pds">"</span></span>?&gt;
+&lt;<span class="pl-ent">CORSConfiguration</span> <span class="pl-e">xmlns</span>=<span class="pl-s"><span class="pl-pds">"</span>http://s3.amazonaws.com/doc/2006-03-01/<span class="pl-pds">"</span></span>&gt;
+  &lt;<span class="pl-ent">CORSRule</span>&gt;
+    &lt;<span class="pl-ent">AllowedOrigin</span>&gt;*&lt;/<span class="pl-ent">AllowedOrigin</span>&gt;
+    &lt;<span class="pl-ent">AllowedMethod</span>&gt;HEAD&lt;/<span class="pl-ent">AllowedMethod</span>&gt;
+    &lt;<span class="pl-ent">AllowedMethod</span>&gt;GET&lt;/<span class="pl-ent">AllowedMethod</span>&gt;
+    &lt;<span class="pl-ent">AllowedMethod</span>&gt;PUT&lt;/<span class="pl-ent">AllowedMethod</span>&gt;
+    &lt;<span class="pl-ent">AllowedMethod</span>&gt;POST&lt;/<span class="pl-ent">AllowedMethod</span>&gt;
+    &lt;<span class="pl-ent">AllowedMethod</span>&gt;DELETE&lt;/<span class="pl-ent">AllowedMethod</span>&gt;
+    &lt;<span class="pl-ent">MaxAgeSeconds</span>&gt;3000&lt;/<span class="pl-ent">MaxAgeSeconds</span>&gt;
+    &lt;<span class="pl-ent">ExposeHeader</span>&gt;ETag&lt;/<span class="pl-ent">ExposeHeader</span>&gt;
+    &lt;<span class="pl-ent">ExposeHeader</span>&gt;x-amz-meta-custom-header&lt;/<span class="pl-ent">ExposeHeader</span>&gt;
+    &lt;<span class="pl-ent">AllowedHeader</span>&gt;*&lt;/<span class="pl-ent">AllowedHeader</span>&gt;
+  &lt;/<span class="pl-ent">CORSRule</span>&gt;
+&lt;/<span class="pl-ent">CORSConfiguration</span>&gt;</pre></div>
+
+<h2>
+<a id="dependencies" class="anchor" href="#dependencies" aria-hidden="true"><span class="octicon octicon-link"></span></a>Dependencies</h2>
+
+<p>The following dependencies are included in the HTML files and hosted by
+CDNs (<a href="https://cdnjs.com/about">cdnjs</a> and <a href="https://developers.google.com/speed/libraries/">Goolge Hosted
+Libraries</a>):</p>
+
+<ul>
+<li>Bootstrap</li>
+<li>jQuery</li>
+<li>Fancybox</li>
+<li>Amazon JavaScript SDK</li>
+</ul>
+
+<h2>
+<a id="optional-external-image-resizer" class="anchor" href="#optional-external-image-resizer" aria-hidden="true"><span class="octicon octicon-link"></span></a>Optional: External Image Resizer</h2>
+
+<p>By default, image resizing is done in the browser. This means that the
+original image is downloaded from S3, resized and then uploaded to its
+final location. This may perform badly with large photos, slow internet
+connections and/or slow web browsers. Furthermore, the resizing in the
+browser isn't perfect and may introduce artifacts.</p>
+
+<p>There is a hook in <code>publish.js</code> to plugin your own image resizer. You
+can, for example, send a XHR request to a PHP script that will download,
+resize and upload the photo/thumb to the bucket.</p>
+
+<h2>
+<a id="todo--contributing" class="anchor" href="#todo--contributing" aria-hidden="true"><span class="octicon octicon-link"></span></a>TODO / Contributing</h2>
+
+<p>(Here's where you come in)</p>
+
+<ul>
+<li>[x] Automatically detect settings (bucket name, paths, etc.)</li>
+<li>[ ] Choose photo and thumb sizes in settings dialog</li>
+<li>[ ] Resize images in the browser without introducing artifacts.</li>
+<li>[ ] Upload images directly from <code>publish.html</code>
+</li>
+<li>[ ] Generate thumbnails for the bucket file browser</li>
+<li>[ ] Select multiple files to add at the same time</li>
+<li>[ ] Filter selectable file types</li>
+<li>[ ] Make the general design more pretty</li>
+</ul>
+
+      <footer class="site-footer">
+        <span class="site-footer-owner"><a href="https://github.com/toehio/s3album">S3album</a> is maintained by <a href="https://github.com/toehio">toehio</a>.</span>
+
+        <span class="site-footer-credits">This page was generated by <a href="https://pages.github.com">GitHub Pages</a> using the <a href="https://github.com/jasonlong/cayman-theme">Cayman theme</a> by <a href="https://twitter.com/jasonlong">Jason Long</a>.</span>
+      </footer>
+
+    </section>
+
+  
+  </body>
+</html>
