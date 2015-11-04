@@ -483,10 +483,6 @@ $('.modal-wide').on('show.bs.modal', function() {
 $('#fileBrowserModal').on('show.bs.modal', updateFileBrowser);
 $('#fileBrowserModal').on('hide.bs.modal', refreshAlbum);
 
-function escapeSelectorStr(str) {
-  return str.replace(/([ #;?%&,.+*~\':"!^$[\]()=>|\/@])/g,'\\$1');
-}
-
 function updateFileBrowser() {
 
   // Breadcrumbs
@@ -629,7 +625,7 @@ function switchToAlbum(name) {
   if (name === '') return;
   $('.main').show();
   $('#albumList li').removeClass('active');
-  $('#albumList a:contains("' + escapeSelectorStr(name) + '")').parent().addClass('active');
+  $('#albumList a').filter(function () { return $(this).text() === name; }).parent().addClass('active');
   app.selectedAlbum = name;
   location.hash = name;
   refreshAlbum();
