@@ -1,6 +1,8 @@
 # S3 Album Publisher
 A pure client-side photo album publisher for S3.
 
+Try it out [here](https://toehio.github.io/s3album/demo/publish.html) with your own S3 bucket, or view a [demo](https://toehio.github.io/s3album/demo/view.html#Demo Album/) of a published album.
+
 ## Overview
 - <b>Browse</b> your bucket for photos.
 - <b>Publish</b> albums from your photos.
