@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>My Album</title>
+
+<script>
+/*
+ * DEFAULTS
+ *
+ * Override the automatically detected parameters here:
+ */
+ENDPOINT = undefined;           // e.g. 's3.amazonaws.com'
+BUCKET = undefined;             // e.g. 'butketname'
+SSL_ENABLED = undefined;        // e.g. true
+FORCE_PATH_STYLE = undefined;   // e.g. false
+PREFIX = undefined;             // e.g. 'path/to/albums/root/'
+</script>
+
+<style>
+.thumb {
+    margin-bottom: 30px;
+}
+</style>
+
+<link href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.5/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.5/jquery.fancybox.min.css" rel="stylesheet">
+
+
+<!-- HTML5 shim and Respond.js for IE8 support of HTML5 elements and media queries -->
+<!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+<!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/html5shiv/3.7.2/html5shiv.min.js"></script>
+      <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
+<![endif]-->
+</head>
+<body>
+
+<div class="container">
+  <div class="row">
+    <div class="col-lg-12">
+      <h1 class="page-header"></h1>
+    </div>
+
+    <div class="row" id="albumThumbs">
+    </div>
+  </div>
+    <div id="messages"></div>
+</div>
+
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.5/js/bootstrap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.5/jquery.fancybox.min.js"></script>
+<script>
+
+/*
+ * Helpers
+ */
+function stripExt(path) {
+  return path.slice(0, path.lastIndexOf('.'));
+}
+
+function basename(path) {
+  return rmTrailingChar(path, '/').split('/').slice(-1)[0];
+}
+
+function rmTrailingChar(str, c) {
+  if (str.slice(-1)[0] === c) return str.slice(0, -1);
+  else return str;
+}
+
+/*
+ * Bucket utils
+ */
+
+var config = {
+  bucket: undefined,
+  endpoint: undefined,
+  sslEnabled: undefined,
+  forcePathStyle: undefined,
+  prefix: undefined
+};
+
+function detectConfig() {
+  var host = window.location.hostname;
+  var path = window.location.pathname.split('/').slice(1);
+  var names, me;
+  config.forcePathStyle = true;
+  if (host.endsWith('s3.amazonaws.com') &&
+    (names = host.split('.')).length === 4) {
+      config.bucket = names[0];
+      config.endpoint = names.slice(1).join('.');
+      config.forcePathStyle = false;
+      me = path;
+  }
+  else {
+    config.bucket = path[0];
+    me = path.slice(1);
+    config.endpoint = host;
+  }
+
+  if (me.join('').endsWith('.html'))
+    config.prefix = me.slice(0, -1).join('/');
+  else
+    config.prefix = me.join('/');
+
+  config.sslEnabled = SSL_ENABLED || window.location.protocol.startsWith('https');
+  config.bucket = BUCKET || config.bucket;
+  config.prefix = PREFIX || config.prefix;
+  config.endpoint = ENDPOINT || config.endpoint;
+  config.forcePathStyle = FORCE_PATH_STYLE || config.forcePathStyle;
+}
+
+
+function bucketBaseUrl() {
+  var proto = config.sslEnabled ? 'https://' : 'http://';
+  var url = proto;
+  if (config.forcePathStyle) url += config.endpoint + '/' + config.bucket;
+  else url += config.bucket + '.' + config.endpoint;
+  return url;
+}
+
+function ls(dir, cb) {
+  var url = bucketBaseUrl() + '?delimiter=/&prefix=' + dir;
+
+  $.get(url).done(function (data) {
+    if (!$(data).find('ListBucketResult').length) return cb('Malformed response');
+    var files = $.map($(data).find('Contents Key'), function (k) {
+      return basename(k.innerHTML);
+    });
+    var dirs = $.map($(data).find('CommonPrefixes Prefix'), function (k) {
+      return basename(k.innerHTML);
+    });
+    cb(null, files, dirs);
+  }).fail(function (x, y, err) {
+    if (cb) return cb(err);
+    throw err;
+  });
+}
+
+function albumPhotoPath(album) {
+  return rmTrailingChar(config.prefix, '/') + '/albums/' + encodeURIComponent(album) + '/photos/';
+}
+
+function albumThumbPath(album) {
+  return rmTrailingChar(config.prefix, '/') + '/albums/' + encodeURIComponent(album) + '/thumbs/';
+}
+
+function getPhotos(album, cb) {
+  if (!album || album === '' ) return cb('Bad album name');
+  // Instrumented for demo:
+  return cb(null, [
+        {
+        title: 'tuscany.jpg',
+        src: 'https://cloud.githubusercontent.com/assets/5776816/10955495/ceac692e-8319-11e5-86c1-d2104e8e1fc7.jpg',
+        thumb: 'https://cloud.githubusercontent.com/assets/5776816/10955497/d389c4f0-8319-11e5-86c6-62b77cfbabf0.jpg'
+        },
+        {
+        title: 'mushrooms.jpg',
+        src: 'https://cloud.githubusercontent.com/assets/5776816/10955493/ceaa12aa-8319-11e5-8a3c-ac4706686b7e.jpg',
+        thumb: 'https://cloud.githubusercontent.com/assets/5776816/10955498/d38a1324-8319-11e5-8f3e-56b7b1717b2b.jpg'
+        },
+        {
+        title: 'sheep.jpg',
+        src: 'https://cloud.githubusercontent.com/assets/5776816/10955494/ceaaabc0-8319-11e5-9994-48240f7f6857.jpg',
+        thumb: 'https://cloud.githubusercontent.com/assets/5776816/10955499/d38a1cca-8319-11e5-966b-29534d7c5568.jpg'
+        }
+  ]);
+  var photoBase = albumPhotoPath(album), thumbBase = albumThumbPath(album);
+  ls(photoBase, function (err, files) {
+    if (err) { if (cb) return cb(err); throw err; }
+    var baseUrl = bucketBaseUrl() + '/';
+    cb(null, files.map(function (f) {
+      return {
+        title: f,
+        src: baseUrl + photoBase + f,
+        thumb: baseUrl +  thumbBase + stripExt(basename(f)) + '.jpg'
+      };
+    }));
+  });
+}
+
+function albumNameFromHash() {
+  return location.hash.slice(1).split('/')[0];
+}
+
+var albumName;
+function loadAlbum() {
+  albumName = albumNameFromHash();
+  if (location.hash.indexOf('/') === -1) location.hash += '/';
+  $('.page-header').text(albumName && albumName !== '' ? albumName : "''");
+  getPhotos(albumName, function (err, photos) {
+    if (err) {
+      $('#messages').html('<div class="alert alert-danger" role="alert"><b>That\'s a 404!</b> Or, in English: this album does not exist.</div>');
+      document.title = '404 Not Found: "' + albumName + '"';
+      return;
+    }
+    document.title = albumName;
+
+    $('#albumThumbs').empty();
+
+    photos.forEach(function (p) {
+      $('#albumThumbs').append([
+        '<div class="col-lg-3 col-md-4 col-xs-6 thumb">',
+          '<a class="thumbnail fancybox" rel="group" title="', p.title, '" href="', p.src, '">',
+            '<img class="img-responsive" src="', p.thumb, '" alt="">',
+            '<div class="caption">',
+              p.title,
+            '</div>',
+          '</a>',
+        '</div>'].join(''));
+    });
+    $(".fancybox").fancybox();
+  });
+}
+
+$(window).on('hashchange', function () {
+  if (albumNameFromHash() !== albumName)
+    loadAlbum();
+});
+$(document).ready(function () {
+  detectConfig();
+  loadAlbum();
+});
+</script>
+</body>
+</html>
