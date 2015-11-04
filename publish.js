@@ -121,14 +121,14 @@ S3Album.prototype.__publicUrlBase = function () {
   return proto + this.admin.dstBucket.config.params.Bucket + '.' + this.admin.dstBucket.config.endpoint + '/';
 };
 S3Album.prototype.__photoPublicUrl = function (photoName) {
-  return  this.__publicUrlBase() + this.__photoPath(photoName);
+  return encodeURI(this.__publicUrlBase() + this.__photoPath(photoName));
 };
 S3Album.prototype.__thumbPublicUrl = function (photoName) {
-  return  this.__publicUrlBase() + this.__thumbPath(photoName);
+  return encodeURI(this.__publicUrlBase() + this.__thumbPath(photoName));
 };
 
 S3Album.prototype.publicUrl = function (cb) {
-  return  this.__publicUrlBase() + this.admin.config.dstPrefix + 'view.html#' + this.albumName + '/';
+  return encodeURI(this.__publicUrlBase() + this.admin.config.dstPrefix + 'view.html')  + '#' + this.albumName + '/';
 };
 
 RESIZE_SCRIPT_URL = 'https://my.domain.com/scripts/s3ImageResizer.php';
