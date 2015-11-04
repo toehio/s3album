@@ -45,15 +45,23 @@ function getExtension(path) {
 
 function ls(bucket, path, cb) {
   var dir = addTrailingChar(path, '/');
-  bucket.listObjects({
-    Prefix: dir
-  },
-  function (err, data) {
-    if (err) { if(cb) return cb(err); throw err; }
-    var dirs = data.CommonPrefixes.map(function (p) { return basename(p.Prefix); });
-    var files = data.Contents.filter(function (f) { return f.Size > 0; }).map(function (f) { return f.Key; });
-    if (cb) cb(null, files, dirs, data);
-  });
+  try {
+    bucket.listObjects({
+      Prefix: dir
+    },
+    function (err, data) {
+      if (err) {
+        err.path = path;
+        if(cb) return cb(err); return showError(err);
+      }
+      var dirs = data.CommonPrefixes.map(function (p) { return basename(p.Prefix); });
+      var files = data.Contents.filter(function (f) { return f.Size > 0; }).map(function (f) { return f.Key; });
+      if (cb) cb(null, files, dirs, data);
+    });
+  }
+  catch (err) {
+    return cb(err);
+  }
 }
 
 
@@ -137,7 +145,7 @@ function resizePhotoWithServerScript(albumObj, hash, cb) {
     },
     error: function (x, status, err) {
       if (cb) return cb(err);
-      throw err;
+      return showError(err);
     }
   });
 }
@@ -168,7 +176,7 @@ function resizePhotoWithJS(album, hash, cb) {
       ContentType: mime
     },
     function (err, data) {
-      if (err) { if(done) return done(err); throw err; }
+      if (err) { if (done) return done(err); return showError(err); }
       if (done) done(null);
     });
   }
@@ -177,7 +185,7 @@ function resizePhotoWithJS(album, hash, cb) {
     Key: hash.srcImg
   },
   function (err, data) {
-    if (err) { if(cb) return cb(err); throw err; }
+    if (err) { if (cb) return cb(err); return showError(err); }
 
     var blob = new Blob([data.Body], {type: data.ContentType});
     var img = new Image();
@@ -188,9 +196,9 @@ function resizePhotoWithJS(album, hash, cb) {
       var thumbScale = getScale(img, hash.thumbWidth, hash.thumbHeight, hash.thumbScale);
 
       resizeAndUpload(img, data.ContentType, photoScale, hash.dstPhoto, function (err) {
-        if (err) { if(cb) return cb(err); throw err; }
+        if (err) { if (cb) return cb(err); return showError(err); }
         resizeAndUpload(img, 'image/jpeg', thumbScale, hash.dstThumb, function (err) {
-          if (err) { if(cb) return cb(err); throw err; }
+          if (err) { if (cb) return cb(err); return showError(err); }
           if (cb) cb();
         });
       });
@@ -233,7 +241,7 @@ S3Album.prototype.deletePhoto = function (photoName, cb) {
       ]}
   },
   function (err, data) {
-    if (err) { if(cb) return cb(err); throw err; }
+    if (err) { if(cb) return cb(err); return showError(err); }
     if (cb) cb(null, data);
   });
 };
@@ -242,7 +250,7 @@ S3Album.prototype.deletePhoto = function (photoName, cb) {
 S3Album.prototype.getPhotos = function (cb) {
   var self = this;
   ls(self.admin.dstBucket, self.__photosDir(), function (err, files) {
-    if (err) { if(cb) return cb(err); throw err; }
+    if (err) { if(cb) return cb(err); return showError(err); }
     var photos = files.map(function (f) {
       var bn = basename(f);
       return {
@@ -317,7 +325,7 @@ S3AlbumAdmin.prototype.lsSrc = function (path, cb) {
 S3AlbumAdmin.prototype.getAlbumNames = function (cb) {
   var self = this;
   ls(self.dstBucket, self.config.albumsPrefix, function (err, files, dirs) {
-    if (err) { if(cb) return cb(err); throw err; }
+    if (err) { if(cb) return cb(err); return showError(err); }
     if (cb) cb(err, dirs);
   });
 };
@@ -368,9 +376,21 @@ $('#settingsModal form').on('submit', function (e) {
   });
   settings.endpoint = settings.endpoint === '' ? 's3.amazonaws.com' : settings.endpoint;
   dumpPersistedSettings();
-  init();
-  $('#settingsModal').modal('hide');
+  init(function (err) {
+    if (!err) return $('#settingsModal').modal('hide');
+    showError(err);
+  });
 });
+
+function showError(err, cb) {
+  if (!err) return;
+  var msg = err;
+  if (err.url) msg += '<br><br>Trying to access: ' + err.url;
+  $('#errorModal .modal-body div').html(msg);
+  $('#errorModal').modal('show');
+  if (cb) $('#errorModal').one('hide.bs.modal', cb);
+
+}
 
 function detectSettings() {
   var s = {};
@@ -493,6 +513,7 @@ function updateFileBrowser() {
     return;
   }
   app.controller.lsSrc(app.cwd, function (err, files) {
+    if (err) return showError(err);
     $('#filesTable').bootstrapTable('append', files);
   });
 }
@@ -573,7 +594,7 @@ function refreshAlbum() {
   $('#pageTitle').text(app.selectedAlbum);
   $('#albumPublicUrl').val(album.publicUrl());
   album.getPhotos(function (err, photos) {
-    if (err) { if(cb) return cb(err); throw err; }
+    if (err) return showError(err);
     $('#albumThumbs').empty();
 
     photos.forEach(function (p) {
@@ -599,7 +620,7 @@ function refreshAlbum() {
 $('#albumThumbs').on('click', '.delete-photo', function (e) {
   var photoName = $(this).data('photo');
   app.controller.album(app.selectedAlbum).deletePhoto(photoName, function (err, data) {
-    if (err) throw err;
+    if (err) return showError(err);
     refreshAlbum();
   });
 });
@@ -616,7 +637,7 @@ function switchToAlbum(name) {
 
 function updateAlbumList(cb) {
   app.controller.getAlbumNames(function (err, albums) {
-    if (err) { if(cb) return cb(err); throw err; }
+    if (err) { if(cb) return cb(err); return showError(err); }
     albums.forEach(function (a) {
       $('#albumList').append('<li><a href="#' + a + '">' + a + '</a></li>');
     });
@@ -628,7 +649,7 @@ $(window).on('hashchange', function () {
   switchToAlbum(location.hash.slice(1));
 });
 
-function init() {
+function init(cb) {
   var srcBucket = new AWS.S3({
     accessKeyId: settings.accessKeyId,
     secretAccessKey: settings.secretAccessKey,
@@ -637,7 +658,6 @@ function init() {
     s3ForcePathStyle: settings.forcePathStyle,
     params: {Bucket: settings.srcBucketName }
   });
-
   var dstBucket = new AWS.S3({
     accessKeyId: settings.accessKeyId,
     secretAccessKey: settings.secretAccessKey,
@@ -656,10 +676,11 @@ function init() {
 
   $('#albumList li').empty();
   updateAlbumList(function (err, albums) {
-    if (err) throw err;
+    if (err) { if(cb) return cb(err); return showError(err); }
     var selected = location.hash.slice(1);
     if (albums.indexOf(selected) !== -1) 
       switchToAlbum(selected);
+    if (cb) cb();
   });
 }
 
