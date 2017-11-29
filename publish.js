@@ -647,6 +647,7 @@ $(window).on('hashchange', function () {
 
 function init(cb) {
   var srcBucket = new AWS.S3({
+    signatureVersion: 'v4',
     accessKeyId: settings.accessKeyId,
     secretAccessKey: settings.secretAccessKey,
     endpoint: settings.endpoint,
@@ -655,6 +656,7 @@ function init(cb) {
     params: {Bucket: settings.srcBucketName }
   });
   var dstBucket = new AWS.S3({
+    signatureVersion: 'v4',
     accessKeyId: settings.accessKeyId,
     secretAccessKey: settings.secretAccessKey,
     endpoint: settings.endpoint,
