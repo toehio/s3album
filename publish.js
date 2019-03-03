@@ -9,7 +9,8 @@ var settings = {
   endpoint: undefined,
   sslEnabled: undefined,
   forcePathStyle: undefined,
-  dstPrefix: undefined
+  dstPrefix: undefined,
+  region: undefined
 };
 
 var app = {
@@ -363,6 +364,7 @@ function loadPersistedSettings() {
   settings.endpoint = settings.endpoint || 's3.amazonaws.com';
   settings.sslEnabled = settings.sslEnabled === undefined ? true : settings.sslEnabled;
   settings.forcePathStyle = settings.forcePathStyle === undefined ? true : settings.forcePathStyle;
+  settings.region = settings.region || 'us-east-1';
 }
 
 $('#settingsModal form').on('submit', function (e) {
@@ -375,6 +377,7 @@ $('#settingsModal form').on('submit', function (e) {
     if (v !== undefined) settings[s] = v;
   });
   settings.endpoint = settings.endpoint === '' ? 's3.amazonaws.com' : settings.endpoint;
+  settings.region = settings.region === '' ? 'us-east-1' : settings.region;
   dumpPersistedSettings();
   init(function (err) {
     if (!err) return $('#settingsModal').modal('hide');
@@ -411,6 +414,12 @@ function detectSettings() {
     s.endpoint = host;
   }
 
+  if (host.startsWith('s3.') &&
+      host.endsWith('.amazonaws.com') &&
+      (names = host.split('.')).length === 4) {
+    s.region = host.split('.').slice(1,2);
+  }
+
   if (me.join('').endsWith('.html'))
     s.dstPrefix = me.slice(0, -1).join('/');
   else
@@ -422,6 +431,7 @@ function detectSettings() {
   s.dstPrefix = DEFAULT_DST_PREFIX || s.dstPrefix;
   s.srcPrefixes = DEFAULT_SRC_PREFIXES; // TODO: How can we guess this?
   s.endpoint = DEFAULT_ENDPOINT || s.endpoint;
+  s.region = DEFAULT_REGION || s.region;
   s.forcePathStyle = DEFAULT_FORCE_PATH_STYLE || s.forcePathStyle;
   return s;
 }
@@ -648,6 +658,7 @@ $(window).on('hashchange', function () {
 function init(cb) {
   var srcBucket = new AWS.S3({
     signatureVersion: 'v4',
+    region: settings.region,
     accessKeyId: settings.accessKeyId,
     secretAccessKey: settings.secretAccessKey,
     endpoint: settings.endpoint,
@@ -657,6 +668,7 @@ function init(cb) {
   });
   var dstBucket = new AWS.S3({
     signatureVersion: 'v4',
+    region: settings.region,
     accessKeyId: settings.accessKeyId,
     secretAccessKey: settings.secretAccessKey,
     endpoint: settings.endpoint,
@@ -676,7 +688,7 @@ function init(cb) {
   updateAlbumList(function (err, albums) {
     if (err) { if(cb) return cb(err); return showError(err); }
     var selected = location.hash.slice(1);
-    if (albums.indexOf(selected) !== -1) 
+    if (albums.indexOf(selected) !== -1)
       switchToAlbum(selected);
     if (cb) cb();
   });
