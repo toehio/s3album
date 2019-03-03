@@ -19,14 +19,20 @@ Being a pure web-app means:
 
 ## Getting Started
 
-1. Upload `album.html`, `publish.html` and `admin.js` to a path in
+1. Upload `view.html`, `publish.html` and `publish.js` to a path in
 your S3 bucket, for example, `public-albums/`. This can be done with
 [s3cmd](https://github.com/s3tools/s3cmd):
 ```bash
-s3cmd put album.html publish.html admin.js s3://bucket/public-albums/
+s3cmd put view.html publish.html publish.js s3://bucket/public-albums/
 ```
-2. In your browser, navigate to `https://domain.of.bucket/public-albums/publish.html`,
+2. In your browser, navigate to `https://s3.region.amazonaws.com/bucket/public-albums/publish.html`,
    enter your S3 credentials, and start publishing albums!
+
+   For example, `https://s3.sa-east-1.amazonaws.com/www.mycooldomain.com.br/public-albums/publish.html`
+
+   Since you're sending your AWS credentials, use HTTPS.
+
+3. CloudFront and FQDN doesn't work - you need to make use of the S3 API endpoint all the time.
 
 ## How It Works
 
@@ -44,12 +50,12 @@ That's all there is to publishing. No databases. No calls to server-side
 scripts. No adding filenames to index files.
 
 ##### Viewing
-`album.html` is used to view published albums. The name of the album is
+`view.html` is used to view published albums. The name of the album is
 specified in the hash of the URL, for example,
-`https://domain.of.bucket/public-albums/album.html#My Holiday
-Pics`.  The photos for the album are found by listing the contents of
+`https://s3.region.amazonaws.com/bucket/public-albums/view.html#My%20Holiday%20Pics`.
+The photos for the album are found by listing the contents of
 `albums/My Holiday Pics/photos/` (relative to the location of
-`album.html`) and then dynamically added to the page.
+`view.html`) and then dynamically added to the page.
 
 ## S3 Bucket Policy
 
@@ -153,12 +159,12 @@ user to the minimum permisions necessary, add the following statements:
   ]
 },
 ```
- 
+
 ## Custom install
 
 It is also possible to store the albums in your bucket, but keep the
-`album.html` on another website. To do this, you can edit the
-configuration in `album.html` to point to your S3 bucket. Also, you will
+`view.html` on another website. To do this, you can edit the
+configuration in `view.html` to point to your S3 bucket. Also, you will
 need to ensure the CORS configuration for your bucket allows requests
 from different origins:
 
@@ -207,6 +213,7 @@ resize and upload the photo/thumb to the bucket.
 (Here's where you come in)
 
 - [x] Automatically detect settings (bucket name, paths, etc.)
+- [x] Support regions other than us-east-1
 - [ ] Choose photo and thumb sizes in settings dialog
 - [ ] Resize images in the browser without introducing artifacts.
 - [ ] Upload images directly from `publish.html`
