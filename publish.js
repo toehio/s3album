@@ -438,62 +438,6 @@ S3AlbumAdmin.prototype.publicUrl = function (cb) {
   return encodeURI(this.__publicUrlBase() + this.config.dstPrefix + 'gallery.html');
 };
 
-/* settings */
-
-function clearPersistedSettings() {
-  window.localStorage.removeItem('settings', undefined);
-  window.sessionStorage.removeItem('settings', undefined);
-}
-
-function dumpPersistedSettings() {
-  clearPersistedSettings();
-  var store;
-  if (settings.persistSettings === 'local') store = window.localStorage;
-  else if (settings.persistSettings === 'session') store = window.sessionStorage;
-  else return; // we are not supposed to persist settings
-
-  store.setItem('settings', JSON.stringify(settings));
-}
-
-function loadPersistedSettings() {
-  let loaded;
-
-  // if there are settings in url, load them instead
-  const urlParams = new URLSearchParams(window.location.search);
-  if (urlParams.get('settings')) {
-
-    loaded = JSON.parse(urlParams.get('settings'));
-
-    console.log(loaded);
-
-    urlParams.delete('settings');
-
-    // also remove them from history
-    window.location.replace(window.location.toString().replace(/\?.*/, '?' + urlParams.toString()));
-
-  } else {
-
-    let store;
-    if (window.localStorage.getItem('settings')) store = window.localStorage;
-    else if (window.sessionStorage.getItem('settings')) store = window.sessionStorage;
-
-    if (store)
-      loaded = JSON.parse(store.getItem('settings'));
-  }
-
-  if (loaded) {
-    Object.keys(settings).forEach(function (s) {
-      settings[s] = loaded[s];
-    });
-    settings.endpoint = settings.endpoint || 's3.amazonaws.com';
-    settings.sslEnabled = settings.sslEnabled === undefined ? true : settings.sslEnabled;
-    settings.forcePathStyle = settings.forcePathStyle === undefined ? true : settings.forcePathStyle;
-    settings.region = settings.region || 'us-east-1';
-
-    dumpPersistedSettings();
-  }
-}
-
 // init
 
 function init() {
@@ -672,19 +616,42 @@ function dumpPersistedSettings() {
 }
 
 function loadPersistedSettings() {
-  var store;
-  if (window.localStorage.getItem('settings')) store = window.localStorage;
-  else if (window.sessionStorage.getItem('settings')) store = window.sessionStorage;
-  else return; // no persisted settings found
+  let loaded;
 
-  var loaded = JSON.parse(store.getItem('settings'));
-  Object.keys(settings).forEach(function (s) {
-    settings[s] = loaded[s];
-  });
-  settings.endpoint = settings.endpoint || 's3.amazonaws.com';
-  settings.sslEnabled = settings.sslEnabled === undefined ? true : settings.sslEnabled;
-  settings.forcePathStyle = settings.forcePathStyle === undefined ? true : settings.forcePathStyle;
-  settings.region = settings.region || 'us-east-1';
+  // if there are settings in url, load them instead
+  const urlParams = new URLSearchParams(window.location.search);
+  if (urlParams.get('settings')) {
+
+    loaded = JSON.parse(urlParams.get('settings'));
+
+    console.log(loaded);
+
+    urlParams.delete('settings');
+
+    // also remove them from history
+    window.location.replace(window.location.toString().replace(/\?.*/, '?' + urlParams.toString()));
+
+  } else {
+
+    let store;
+    if (window.localStorage.getItem('settings')) store = window.localStorage;
+    else if (window.sessionStorage.getItem('settings')) store = window.sessionStorage;
+
+    if (store)
+      loaded = JSON.parse(store.getItem('settings'));
+  }
+
+  if (loaded) {
+    Object.keys(settings).forEach(function (s) {
+      settings[s] = loaded[s];
+    });
+    settings.endpoint = settings.endpoint || 's3.amazonaws.com';
+    settings.sslEnabled = settings.sslEnabled === undefined ? true : settings.sslEnabled;
+    settings.forcePathStyle = settings.forcePathStyle === undefined ? true : settings.forcePathStyle;
+    settings.region = settings.region || 'us-east-1';
+
+    dumpPersistedSettings();
+  }
 }
 
 $('#settingsModal form').on('submit', function (e) {
