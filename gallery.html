@@ -5,7 +5,7 @@
   <meta charset="utf-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>My Album</title>
+  <title>Gallery</title>
 
   <script>
     /*
@@ -24,37 +24,10 @@
   <link href="https://cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.5/jquery.fancybox.min.css" rel="stylesheet">
 
   <style>
-    .thumbnail {
-      position: relative;
-      overflow: hidden;
-      padding: 0;
-      height: 150px;
-      width: max-content;
-      margin-right: auto;
-      margin-left: auto;
-      background-position: center;
-      background-repeat: no-repeat;
-      background-size: contain;
-    }
-
-    .thumbnail .caption {
-      position: absolute;
-      white-space: pre;
-      overflow: hidden;
-      width: 100%;
-      bottom: 0;
-      padding: 5px;
-      color: white;
-      background: rgba(0, 0, 0, 0.3);
-    }
-
-    .thumbnail img, .fancybox-image {
-      image-orientation: from-image;
-    }
-    
-    .fancybox-image {
-      width: initial;
-      margin: auto;
+    #albums>a {
+      font-size: 18px;
+      padding: 1rem 0;
+      display: block;
     }
   </style>
 
@@ -69,15 +42,13 @@
 <body>
 
   <div class="container">
-    <div class="row">
-      <div class="col-lg-12">
-        <h1 class="page-header"></h1>
-      </div>
 
-      <div class="row" id="albumThumbs">
-      </div>
+    <div class="row">
+      <h1 class="page-header">Gallery</h1>
     </div>
-    <div id="messages"></div>
+
+    <div class="row" id="albums">
+    </div>
   </div>
 
   <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
@@ -88,10 +59,6 @@
     /*
      * Helpers
      */
-    function stripExt(path) {
-      return path.slice(0, path.lastIndexOf('.'));
-    }
-
     function basename(path) {
       return rmTrailingChar(path, '/').split('/').slice(-1)[0];
     }
@@ -143,7 +110,6 @@
       config.forcePathStyle = FORCE_PATH_STYLE || config.forcePathStyle;
     }
 
-
     function bucketBaseUrl() {
       var proto = config.sslEnabled ? 'https://' : 'http://';
       var url = proto;
@@ -170,70 +136,21 @@
       });
     }
 
-    function albumPhotoPath(album) {
-      return rmTrailingChar(config.prefix, '/') + '/albums/' + encodeURIComponent(album) + '/photos/';
-    }
-
-    function albumThumbPath(album) {
-      return rmTrailingChar(config.prefix, '/') + '/albums/' + encodeURIComponent(album) + '/thumbs/';
-    }
-
-    function getPhotos(album, cb) {
-      if (!album || album === '') return cb('Bad album name');
-      var photoBase = albumPhotoPath(album), thumbBase = albumThumbPath(album);
-      ls(photoBase, function (err, files) {
+    function loadAlbums() {
+      ls(rmTrailingChar(config.prefix, '/') + '/albums/', function (err, files, dirs) {
         if (err) { if (cb) return cb(err); throw err; }
-        var baseUrl = bucketBaseUrl() + '/';
-        cb(null, files.map(function (f) {
-          return {
-            title: f,
-            src: baseUrl + photoBase + f,
-            thumb: baseUrl + thumbBase + stripExt(basename(f)) + '.jpg'
-          };
-        }));
+
+        $('#albums').empty();
+
+        dirs.forEach(dir => {
+          $('#albums').append(`<a href="./view.html#${dir}/">${dir}</a>`);
+        })
       });
     }
 
-    function albumNameFromHash() {
-      return decodeURIComponent(location.hash.slice(1).split('/')[0]);
-    }
-
-    var albumName;
-    function loadAlbum() {
-      albumName = albumNameFromHash();
-      if (location.hash.indexOf('/') === -1) location.hash += '/';
-      $('.page-header').text(albumName && albumName !== '' ? albumName : "''");
-      getPhotos(albumName, function (err, photos) {
-        if (err) {
-          $('#messages').html('<div class="alert alert-danger" role="alert"><b>That\'s a 404!</b> Or, in English: this album does not exist.</div>');
-          document.title = '404 Not Found: "' + albumName + '"';
-          return;
-        }
-        document.title = albumName;
-
-        $('#albumThumbs').empty();
-
-        photos.forEach(function (p) {
-          $('#albumThumbs').append([
-            '<div class="col-lg-3 col-md-4 col-xs-6">',
-            `<a class="thumbnail fancybox" rel="group" title="${p.title}" href="${p.src}">`,
-            `<img src="${p.thumb}" height="150" alt="" />`,
-            '<div class="caption">', p.title, '</div>',
-            '</a>',
-            '</div>',
-          ].join(''));
-        });
-        $(".fancybox").fancybox();
-      });
-    }
-
-    $(window).on('hashchange', function () {
-      if (albumNameFromHash() !== albumName)
-        loadAlbum();
-    });
     $(document).ready(function () {
       detectConfig();
-      loadAlbum();
+      loadAlbums();
     });
   </script>
 </body>

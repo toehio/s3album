@@ -1,278 +1,268 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-<meta charset="utf-8">
-<meta http-equiv="X-UA-Compatible" content="IE=edge">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>S3 Album Publisher</title>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>S3 Album Uploader</title>
 
-<script><!-- DEFAULTS -->
-DEFAULT_FORCE_PATH_STYLE = undefined;
-DEFAULT_ENDPOINT = undefined;
-DEFAULT_REGION = undefined;
-DEFAULT_DST_PREFIX = undefined;
-DEFAULT_SRC_PREFIXES = undefined;
-DEFAULT_BUCKET = undefined;
-DEFAULT_SSL_ENABLED = undefined;
-DEFAULT_PHOTO_WIDTH = 1600;
-DEFAULT_THUMB_HEIGHT = 150;
-</script>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.5/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-table/1.9.1/bootstrap-table.min.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.5/jquery.fancybox.min.css" rel="stylesheet">
 
-<link href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.5/css/bootstrap.min.css" rel="stylesheet">
-<link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-table/1.9.1/bootstrap-table.min.css" rel="stylesheet">
-<link href="https://cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.5/jquery.fancybox.min.css" rel="stylesheet">
+  <style>
+    .detected-config {
+      display: none;
+      width: 250px;
+    }
 
-<style>
-.detected-config {
-  display: none;
-  width: 250px;
-}
+    h1 input {
+      border: none;
+      background: transparent;
+      width: calc(100% - 120px);
+    }
 
-/*
- * Sidebar
- */
-/* Hide for mobile, show later */
-.sidebar {
-  display: none;
-}
-@media (min-width: 768px) {
-  .sidebar {
-    position: fixed;
-    top: 0px;
-    bottom: 0;
-    left: 0;
-    z-index: 1000;
-    display: block;
-    padding: 20px;
-    overflow-x: hidden;
-    overflow-y: auto; /* Scrollable contents if viewport is shorter than content. */
-    background-color: #f5f5f5;
-    border-right: 1px solid #eee;
-  }
-}
+    /* Upload zone */
 
-/* Sidebar navigation */
-.nav-sidebar {
-  margin-right: -21px; /* 20px padding + 1px border */
-  margin-bottom: 20px;
-  margin-left: -20px;
-}
-.nav-sidebar > li > a {
-  padding-right: 20px;
-  padding-left: 20px;
-}
-.nav-sidebar > .active > a,
-.nav-sidebar > .active > a:hover,
-.nav-sidebar > .active > a:focus {
-  color: #fff;
-  background-color: #428bca;
-}
+    #uploadZone {
+      margin: 3rem 0;
+    }
 
+    #uploadQueue>div {
+      margin: 0.75rem 0;
+    }
 
-/*
- * Main content
- */
+    /* Sidebar */
 
-.main {
-  padding: 20px;
-}
-@media (min-width: 768px) {
-  .main {
-    padding-right: 40px;
-    padding-left: 40px;
-  }
-}
-.main .page-header {
-  margin-top: 0;
-}
+    /* Hide for mobile, show later */
 
-/*
- * Modals
- */
+    .sidebar {
+      display: none;
+    }
 
-.modal.modal-wide .modal-dialog {
-  width: 99%;
-  height: 99%
-}
-.modal-wide .modal-body {
-  overflow-y: auto;
-}
-</style>
+    .sidebar>* {
+      margin-bottom: 1rem;
+    }
 
-<!-- HTML5 shim and Respond.js for IE8 support of HTML5 elements and media queries -->
-<!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
-<!--[if lt IE 9]>
+    .sidebar>.btn {
+      display: block;
+      width: 100%;
+    }
+
+    @media (min-width: 768px) {
+      .sidebar {
+        position: fixed;
+        top: 0px;
+        bottom: 0;
+        left: 0;
+        z-index: 1000;
+        display: block;
+        padding: 20px;
+        overflow-x: hidden;
+        overflow-y: auto;
+        /* Scrollable contents if viewport is shorter than content. */
+        background-color: #f5f5f5;
+        border-right: 1px solid #eee;
+      }
+    }
+
+    /* Sidebar navigation */
+
+    .nav-sidebar {
+      margin-right: -21px;
+      /* 20px padding + 1px border */
+      margin-bottom: 20px;
+      margin-left: -20px;
+    }
+
+    .nav-sidebar>li>a {
+      padding-right: 20px;
+      padding-left: 20px;
+    }
+
+    .nav-sidebar>.active>a,
+    .nav-sidebar>.active>a:hover,
+    .nav-sidebar>.active>a:focus {
+      color: #fff;
+      background-color: #428bca;
+    }
+
+    /* Modals */
+
+    .modal.modal-wide .modal-dialog {
+      width: 99%;
+      height: 99%
+    }
+
+    .modal-wide .modal-body {
+      overflow-y: auto;
+    }
+
+    /* Thumbnails */
+
+    .thumbnail {
+      position: relative;
+      overflow: hidden;
+      padding: 0;
+      height: 150px;
+      width: max-content;
+      margin-right: auto;
+      margin-left: auto;
+      background-position: center;
+      background-repeat: no-repeat;
+      background-size: contain;
+    }
+
+    .thumbnail .caption {
+      position: absolute;
+      white-space: pre;
+      overflow: hidden;
+      width: 100%;
+      bottom: 0;
+      padding: 5px;
+      color: white;
+      background: rgba(0, 0, 0, 0.3);
+    }
+
+    .thumbnail img, .fancybox-image {
+      image-orientation: from-image;
+    }
+
+    .fancybox-image {
+      width: initial;
+      margin: auto;
+    }
+  </style>
+
+  <!-- HTML5 shim and Respond.js for IE8 support of HTML5 elements and media queries -->
+  <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+  <!--[if lt IE 9]>
       <script src="https://oss.maxcdn.com/html5shiv/3.7.2/html5shiv.min.js"></script>
       <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
 <![endif]-->
 
 </head>
+
 <body>
 
-<div class="container-fluid">
-  <div class="row">
-    <div class="col-sm-3 col-md-2 sidebar">
-      <ul>
+  <div class="container-fluid">
+    <div class="row">
+      <div class="col-sm-3 col-md-2 sidebar">
+
+        <a class="btn btn-default" href="#" target="_blank" id="openPublicGallery">
+          <i class="glyphicon glyphicon-align-justify"></i>
+          Gallery
+        </a>
+
         <button type="button" class="btn btn-default" data-toggle="modal" data-target="#settingsModal">
           <span class="glyphicon glyphicon-cog" aria-hidden="true"></span>
           Settings
         </button>
-      </ul>
-      <ul>
-        <button type="button" class="btn btn-default" data-toggle="modal" data-target="#newAlbumModal">
+
+        <a class="btn btn-default" href="#">
           <span class="glyphicon glyphicon-book" aria-hidden="true"></span>
           New album
-        </button>
-      </ul>
-      <ul class="nav nav-sidebar" id="albumList">
+        </a>
 
-      </ul>
-    </div>
-    <div class="col-sm-9 col-sm-offset-3 col-md-10 col-md-offset-2 main" style="display: none;">
-      <h1 class="page-header">
-        <span id="pageTitle">Create a new album or select one from the right</span>
-        <button id="addPhotos" type="button" class="btn btn-default" data-toggle="modal" data-target="#fileBrowserModal">
-          <span class="glyphicon glyphicon-picture" aria-hidden="true"></span>
-          Add photos
-        </button>
-      </h1>
-      <div class="input-group pull-left">
-            <span class="input-group-addon" id="basic-addon3">Public URL:</span>
-        <input type="text" class="form-control" id="albumPublicUrl" value="someurl" size="50" readonly>
-      </div>
-      <div class="row">
-      </div>
+        <ul class="nav nav-stacked" id="albumList">
 
-      <div class="row" id="albumThumbs">
-      </div>
+        </ul>
 
-    </div>
-  </div>
-</div>
+      </div>
+      <div class="col-sm-9 col-sm-offset-3 col-md-10 col-md-offset-2 main">
 
-<div class="modal fade" id="fileBrowserModal" tabindex="-1" role="dialog">
-  <div class="modal-dialog" role="document">
-    <div class="modal-content">
-      <div class="modal-header">
-        <button type="button" class="close" data-dismiss="modal" aria-label="Done"><span aria-hidden="true">&times;</span></button>
-        <h4 class="modal-title" id="fileBrowserModalLabel">S3 Bucket Browser</h4>
-      </div>
-      <div class="modal-body">
-        <ol id="filesBreadcrumbs" class="breadcrumb">
-        </ol>
-        <table id="filesTable" class="table" data-toggle="table">
-          <thead>
-            <tr>
-              <th data-field="actions" data-formatter="actionColumnFormatter" data-events="actionColumnEvent"></th>
-              <th data-field="Name" data-formatter="nameColumnFormatter">Name</th>
-              <th data-field="Size">Size</th>
-              <th data-field="LastModified">Date</th>
-            </tr>
-          </thead>
-          <tbody>
-          </tbody>
-        </table>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-default" data-dismiss="modal">Done</button>
+        <h1 class="page-header">
+          <input type="text" id="albumTitle" placeholder="My new album" />
+          <button id="setAlbumTitle" class="btn btn-default pull-right" onclick="setNewAlbumTitle()">Create</button>
+        </h1>
+
+        <div class="row" id="uploadZone">
+
+          <div class="col-sm-6">
+            <button id="addPhotos" type="button" class="btn btn-default" data-toggle="modal"
+              data-target="#fileBrowserModal">
+              <span class="glyphicon glyphicon-picture" aria-hidden="true"></span>
+              Add from S3 bucket
+            </button>
+
+            <label class="btn btn-default" for="inputFile">Upload</label>
+            <input type="file" class="hidden" id="inputFile" multiple="true" />
+          </div>
+
+          <div class="col-sm-6">
+            <a class="btn btn-default pull-right" href="#" target="_blank" id="openAlbum">Open public album</a>
+          </div>
+
+          <div class="col-sm-12" id="uploadQueue">
+          </div>
+
+        </div>
+
+        <div class="row" id="albumThumbs">
+        </div>
+
       </div>
     </div>
   </div>
-</div>
 
-<div class="modal fade" id="newAlbumModal" tabindex="-1" role="dialog">
-  <div class="modal-dialog" role="document">
-    <div class="modal-content">
-      <div class="modal-header">
-        <button type="button" class="close" data-dismiss="modal" aria-label="Done"><span aria-hidden="true">&times;</span></button>
-        <h4 class="modal-title" id="newAlbumModalLabel">New Album</h4>
-      </div>
-      <form>
+  <div class="modal fade" id="fileBrowserModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <button type="button" class="close" data-dismiss="modal" aria-label="Done"><span
+              aria-hidden="true">&times;</span></button>
+          <h4 class="modal-title" id="fileBrowserModalLabel">S3 Bucket Browser</h4>
+        </div>
         <div class="modal-body">
-          <input type="text" class="form-control" placeholder="Album name...">
+          <ol id="filesBreadcrumbs" class="breadcrumb">
+          </ol>
+          <table id="filesTable" class="table" data-toggle="table">
+            <thead>
+              <tr>
+                <th data-field="actions" data-formatter="actionColumnFormatter" data-events="actionColumnEvent"></th>
+                <th data-field="Name" data-formatter="nameColumnFormatter">Name</th>
+                <th data-field="Size">Size</th>
+                <th data-field="LastModified">Date</th>
+              </tr>
+            </thead>
+            <tbody>
+            </tbody>
+          </table>
         </div>
         <div class="modal-footer">
-          <button type="submit" class="btn btn-primary">Create album</button>
-          <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
-        </form>
+          <button type="button" class="btn btn-default" data-dismiss="modal">Done</button>
+        </div>
       </div>
     </div>
   </div>
-</div>
 
-<div class="modal modal-wide fade" id="settingsModal" tabindex="-1" role="dialog">
-  <div class="modal-dialog" role="document">
-    <div class="modal-content">
-      <div class="modal-header">
-        <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span></button>
-        <h4 class="modal-title">Settings</h4>
-      </div>
-      <form class="form-horizontal" role="form">
-        <div class="modal-body">
+  <div class="modal modal-wide fade" id="settingsModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span></button>
+          <h4 class="modal-title">Settings</h4>
+        </div>
+        <form class="form-horizontal" role="form">
+          <div class="modal-body">
 
-          <div class="panel panel-default">
-            <div class="panel-heading"><b>S3 Credentials</b></div>
-            <div class="panel-body">
-              <div class="form-group row">
-                <label class="control-label col-sm-2" for="accessKeyId">Access Key ID:</label>
-                <div class="col-sm-10">
-                  <input type="text" class="form-control" name="accessKeyId" id="accessKeyId" placeholder="accessKeyId">
-                  <span class="help-block detected-config">Automatically detected</span>
-                </div>
-              </div>
-              <div class="form-group row">
-                <label class="control-label col-sm-2" for="secretAccessKey">Secret Access Key:</label>
-                <div class="col-sm-10">
-                  <input type="text" class="form-control" name="secretAccessKey" id="secretAccessKey" placeholder="secretAccessKey">
-                  <div class="form-control-feedback detected-config">
-                    <span class="glyphicon glyphicon-eye-open" aria-hidden="true"></span>
-                    Automatically detected
+            <div class="panel panel-default">
+              <div class="panel-heading"><b>S3 Credentials</b></div>
+              <div class="panel-body">
+                <div class="form-group row">
+                  <label class="control-label col-sm-2" for="accessKeyId">Access Key ID:</label>
+                  <div class="col-sm-10">
+                    <input type="text" class="form-control" name="accessKeyId" id="accessKeyId"
+                      placeholder="accessKeyId">
+                    <span class="help-block detected-config">Automatically detected</span>
                   </div>
                 </div>
-              </div>
-            </div>
-          </div>
-
-          <div class="panel panel-default">
-            <div class="panel-heading"><b>Source Bucket</b> <small>Where do you keep your photos?</small></div>
-            <div class="panel-body">
-              <div class="form-group row">
-                <label class="control-label col-sm-2" for="srcBucketName">Bucket name:</label>
-                <div class="col-sm-10">
-                  <input type="text" class="form-control" name="srcBucketName" id="srcBucketName" placeholder="srcBucketName">
-                  <div class="form-control-feedback detected-config">
-                    <span class="glyphicon glyphicon-eye-open" aria-hidden="true"></span>
-                    Automatically detected
-                  </div>
-                </div>
-              </div>
-              <div class="form-group row">
-                <label class="control-label col-sm-2" for="srcPrefixes">Path to original photos:</label>
-                <div class="col-sm-10">
-                  <input type="text" class="form-control" name="srcPrefixes" id="srcPrefixes" placeholder="Specify the location of your original photos in the bucket (separate multiple paths with commas ',')">
-                  <div class="form-control-feedback detected-config">
-                    <span class="glyphicon glyphicon-eye-open" aria-hidden="true"></span>
-                    Automatically detected
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div class="panel panel-default">
-            <div class="panel-heading"><b>Public Bucket</b> <small>Where are the albums stored (and publicly visible)?</small></div>
-            <div class="panel-body">
-              <div class="form-group row">
-                <label class="control-label col-sm-2" for="dstBucketName">Bucket name:</label>
-                <div class="col-sm-10">
-                  <div class="input-group">
-                    <div class="checkbox input-group-addon">
-                      <label>
-                        <input type="checkbox" id="useSameBucket" value="" checked>
-                        same bucket as source
-                      </label>
-                    </div>
-                    <input type="text" class="form-control" name="dstBucketName" id="dstBucketName" placeholder="dstBucketName" disabled>
+                <div class="form-group row">
+                  <label class="control-label col-sm-2" for="secretAccessKey">Secret Access Key:</label>
+                  <div class="col-sm-10">
+                    <input type="text" class="form-control" name="secretAccessKey" id="secretAccessKey"
+                      placeholder="secretAccessKey">
                     <div class="form-control-feedback detected-config">
                       <span class="glyphicon glyphicon-eye-open" aria-hidden="true"></span>
                       Automatically detected
@@ -280,130 +270,188 @@ DEFAULT_THUMB_HEIGHT = 150;
                   </div>
                 </div>
               </div>
-              <div class="form-group row">
-                <label class="control-label col-sm-2" for="dstPrefix">Path to published albums:</label>
-                <div class="col-sm-10">
-                  <input type="text" class="form-control" name="dstPrefix" id="dstPrefix" placeholder="The location in the bucket of the published albums, for example: albums/">
-                  <div class="form-control-feedback detected-config">
-                    <span class="glyphicon glyphicon-eye-open" aria-hidden="true"></span>
-                    Automatically detected
+            </div>
+
+            <div class="panel panel-default">
+              <div class="panel-heading"><b>Source Bucket</b> <small>Where do you keep your photos?</small></div>
+              <div class="panel-body">
+                <div class="form-group row">
+                  <label class="control-label col-sm-2" for="srcBucketName">Bucket name:</label>
+                  <div class="col-sm-10">
+                    <input type="text" class="form-control" name="srcBucketName" id="srcBucketName"
+                      placeholder="srcBucketName">
+                    <div class="form-control-feedback detected-config">
+                      <span class="glyphicon glyphicon-eye-open" aria-hidden="true"></span>
+                      Automatically detected
+                    </div>
+                  </div>
+                </div>
+                <div class="form-group row">
+                  <label class="control-label col-sm-2" for="srcPrefixes">Path to original photos:</label>
+                  <div class="col-sm-10">
+                    <input type="text" class="form-control" name="srcPrefixes" id="srcPrefixes"
+                      placeholder="Specify the location of your original photos in the bucket (separate multiple paths with commas ',')">
+                    <div class="form-control-feedback detected-config">
+                      <span class="glyphicon glyphicon-eye-open" aria-hidden="true"></span>
+                      Automatically detected
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
-          </div>
 
-          <div class="panel panel-default">
-            <div class="panel-heading">
-              <div class="btn-group pull-right">
-                <button type="button" class="btn btn-warning" id="clearPersistedSettings">
-                  Clear all persisted settings
-                </button>
-              </div>
-              <h5>
-                <b>Persist Settings</b>
-                <small>For how long do you want to save these settings in your browser?</small>
-              </h5>
-            </div>
-            <div class="panel-body">
-              <div class="radio">
-                <label>
-                  <input type="radio" name="persistSettings" value="local">
-                  Always remember these settings (until you clear your browser history and data)
-                </label>
-              </div>
-              <div class="radio">
-                <label>
-                  <input type="radio" name="persistSettings" value="session" checked>
-                  Forget these settings when I close my browser
-                </label>
-              </div>
-              <div class="radio">
-                <label>
-                  <input type="radio" name="persistSettings" value="dont">
-                  Forget these settings when I close this app
-                </label>
-              </div>
-
-            </div>
-          </div>
-
-          <div class="panel panel-default">
-            <div class="panel-heading"><b>Advanced Settings</b> <small>Where are the albums stored (and publicly visible)?</small></div>
-            <div class="panel-body">
-              <div class="form-group row">
-                <label class="control-label col-sm-2" for="endpoint">S3 endpoint:</label>
-                <div class="col-sm-10">
-                  <input type="text" class="form-control" name="endpoint" id="endpoint" placeholder="s3.amazonaws.com">
-                  <div class="form-control-feedback detected-config">
-                    <span class="glyphicon glyphicon-eye-open" aria-hidden="true"></span>
-                    Automatically detected
+            <div class="panel panel-default">
+              <div class="panel-heading"><b>Public Bucket</b> <small>Where are the albums stored (and publicly
+                  visible)?</small></div>
+              <div class="panel-body">
+                <div class="form-group row">
+                  <label class="control-label col-sm-2" for="dstBucketName">Bucket name:</label>
+                  <div class="col-sm-10">
+                    <div class="input-group">
+                      <div class="checkbox input-group-addon">
+                        <label>
+                          <input type="checkbox" id="useSameBucket" value="" checked>
+                          same bucket as source
+                        </label>
+                      </div>
+                      <input type="text" class="form-control" name="dstBucketName" id="dstBucketName"
+                        placeholder="dstBucketName" disabled>
+                      <div class="form-control-feedback detected-config">
+                        <span class="glyphicon glyphicon-eye-open" aria-hidden="true"></span>
+                        Automatically detected
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="form-group row">
+                  <label class="control-label col-sm-2" for="dstPrefix">Path to published albums:</label>
+                  <div class="col-sm-10">
+                    <input type="text" class="form-control" name="dstPrefix" id="dstPrefix"
+                      placeholder="The location in the bucket of the published albums, for example: albums/">
+                    <div class="form-control-feedback detected-config">
+                      <span class="glyphicon glyphicon-eye-open" aria-hidden="true"></span>
+                      Automatically detected
+                    </div>
                   </div>
                 </div>
               </div>
-              <div class="form-group row">
-                <label class="control-label col-sm-2" for="region">Region:</label>
-                <div class="col-sm-10">
-                  <input type="text" class="form-control" name="region" id="region" placeholder="us-east-1">
-                  <div class="form-control-feedback detected-config">
-                    <span class="glyphicon glyphicon-eye-open" aria-hidden="true"></span>
-                    Automatically detected
+            </div>
+
+            <div class="panel panel-default">
+              <div class="panel-heading">
+                <div class="btn-group pull-right">
+                  <button type="button" class="btn btn-warning" id="clearPersistedSettings">
+                    Clear all persisted settings
+                  </button>
+                </div>
+                <h5>
+                  <b>Persist Settings</b>
+                  <small>For how long do you want to save these settings in your browser?</small>
+                </h5>
+              </div>
+              <div class="panel-body">
+                <div class="radio">
+                  <label>
+                    <input type="radio" name="persistSettings" value="local">
+                    Always remember these settings (until you clear your browser history and data)
+                  </label>
+                </div>
+                <div class="radio">
+                  <label>
+                    <input type="radio" name="persistSettings" value="session" checked>
+                    Forget these settings when I close my browser
+                  </label>
+                </div>
+                <div class="radio">
+                  <label>
+                    <input type="radio" name="persistSettings" value="dont">
+                    Forget these settings when I close this app
+                  </label>
+                </div>
+
+              </div>
+            </div>
+
+            <div class="panel panel-default">
+              <div class="panel-heading"><b>Advanced Settings</b> <small>Where are the albums stored (and publicly
+                  visible)?</small></div>
+              <div class="panel-body">
+                <div class="form-group row">
+                  <label class="control-label col-sm-2" for="endpoint">S3 endpoint:</label>
+                  <div class="col-sm-10">
+                    <input type="text" class="form-control" name="endpoint" id="endpoint"
+                      placeholder="s3.amazonaws.com">
+                    <div class="form-control-feedback detected-config">
+                      <span class="glyphicon glyphicon-eye-open" aria-hidden="true"></span>
+                      Automatically detected
+                    </div>
+                  </div>
+                </div>
+                <div class="form-group row">
+                  <label class="control-label col-sm-2" for="region">Region:</label>
+                  <div class="col-sm-10">
+                    <input type="text" class="form-control" name="region" id="region" placeholder="us-east-1">
+                    <div class="form-control-feedback detected-config">
+                      <span class="glyphicon glyphicon-eye-open" aria-hidden="true"></span>
+                      Automatically detected
+                    </div>
+                  </div>
+                </div>
+                <div class="form-group row">
+                  <label class="control-label col-sm-2" for="sslEnabled">SSL enabled:</label>
+                  <div class="col-sm-10">
+                    <input type="checkbox" name="sslEnabled" id="sslEnabled" value="" checked>
+                    <span class="help-block detected-config">(Automatically detected)</span>
+                  </div>
+                </div>
+                <div class="form-group row">
+                  <label class="control-label col-sm-2" for="forcePathStyle">Force path style:</label>
+                  <div class="col-sm-10">
+                    <input type="checkbox" name="forcePathStyle" id="forcePathStyle" value="">
+                    <span class="help-block detected-config">(Automatically detected)</span>
                   </div>
                 </div>
               </div>
-              <div class="form-group row">
-                <label class="control-label col-sm-2" for="sslEnabled">SSL enabled:</label>
-                <div class="col-sm-10">
-                  <input type="checkbox" name="sslEnabled" id="sslEnabled" value="" checked>
-                  <span class="help-block detected-config">(Automatically detected)</span>
-                </div>
-              </div>
-              <div class="form-group row">
-                <label class="control-label col-sm-2" for="forcePathStyle">Force path style:</label>
-                <div class="col-sm-10">
-                  <input type="checkbox" name="forcePathStyle" id="forcePathStyle" value="">
-                  <span class="help-block detected-config">(Automatically detected)</span>
-                </div>
-              </div>
             </div>
+
           </div>
 
-        </div>
-
-        <div class="modal-footer">
-          <button type="submit" class="btn btn-primary">Save</button>
-          <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+          <div class="modal-footer">
+            <button type="submit" class="btn btn-primary">Save</button>
+            <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+          </div>
         </form>
       </div>
     </div>
   </div>
-</div>
 
-<div class="modal fade" id="errorModal" tabindex="-1" role="dialog">
-  <div class="modal-dialog" role="document">
-    <div class="modal-content">
-      <div class="modal-header">
-        <button type="button" class="close" data-dismiss="modal" aria-label="Done"><span aria-hidden="true">&times;</span></button>
-        <h4 class="modal-title" id="errorModalLabel">Error</h4>
-      </div>
-      <form>
-        <div class="modal-body">
-          <div class="alert alert-danger" role="alert">
-          </div>
+  <div class="modal fade" id="errorModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <button type="button" class="close" data-dismiss="modal" aria-label="Done"><span
+              aria-hidden="true">&times;</span></button>
+          <h4 class="modal-title" id="errorModalLabel">Error</h4>
         </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-default" data-dismiss="modal">OK</button>
+        <form>
+          <div class="modal-body">
+            <div class="alert alert-danger" role="alert">
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-default" data-dismiss="modal">OK</button>
+          </div>
         </form>
       </div>
     </div>
   </div>
-</div>
 
-<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
-<script src="https://sdk.amazonaws.com/js/aws-sdk-2.1.12.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.5/js/bootstrap.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-table/1.9.1/bootstrap-table.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.5/jquery.fancybox.min.js"></script>
-<script src="publish.js"></script>
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
+  <script src="https://sdk.amazonaws.com/js/aws-sdk-2.1.12.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.5/js/bootstrap.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-table/1.9.1/bootstrap-table.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.5/jquery.fancybox.min.js"></script>
+  <script src="publish.js"></script>
 </body>
+
 </html>
