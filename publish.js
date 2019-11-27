@@ -9,6 +9,7 @@ DEFAULT_PHOTO_WIDTH = 1600;
 DEFAULT_THUMB_HEIGHT = 150;
 DEFAULT_FILENAME_FROM_DATE = true;
 DEFAULT_REVERSE_ALBUMS = false;
+DEFAULT_SAVE_ORIGINAL = true;
 
 var settings = {
   /* DON'T CHANGE ANYTHING HERE, YOU *WILL* BE OVERWRITTEN. */
@@ -127,6 +128,9 @@ S3Album.prototype.__photoPath = function (photoName) {
 S3Album.prototype.__thumbPath = function (photoName) {
   return this.admin.config.albumsPrefix + this.albumName + '/thumbs/' + stripExt(photoName) + '.jpg';
 };
+S3Album.prototype.__originalPath = function (photoName) {
+  return this.admin.config.albumsPrefix + this.albumName + '/original/' + photoName;
+};
 S3Album.prototype.__photoPublicUrl = function (photoName) {
   return encodeURI(this.admin.__publicUrlBase() + this.__photoPath(photoName));
 };
@@ -209,6 +213,17 @@ function resizePhotoWithJS(album, data, cb) {
     return scale;
   }
 
+  function upload(blob, mime, dst, storage) {
+    return new Promise((resolve, reject) =>
+      album.admin.dstBucket.putObject({
+        Key: dst,
+        Body: blob,
+        ContentType: mime,
+        StorageClass: storage || 'STANDARD'
+      }, (err) => err ? reject(error) : resolve())
+    );
+  }
+
   function resizeAndUpload(img, srcOrientation, mime, scale, dst, storage) {
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
@@ -240,14 +255,7 @@ function resizePhotoWithJS(album, data, cb) {
     const dataUrl = canvas.toDataURL(mime);
     const resizedBlob = b64toBlob(dataUrl.replace(/^data:\w*\/\w*;base64,/, ''), mime);
 
-    return new Promise((resolve, reject) =>
-      album.admin.dstBucket.putObject({
-        Key: dst,
-        Body: resizedBlob,
-        ContentType: mime,
-        StorageClass: storage || 'STANDARD'
-      }, (err) => err ? reject(error) : resolve())
-    );
+    return upload(resizedBlob, mime, dst, storage);
   }
 
   function getEXIFDate(blob) {
@@ -286,12 +294,19 @@ function resizePhotoWithJS(album, data, cb) {
 
           const thumbBasename = basename(data.dstThumb);
           data.dstThumb = data.dstThumb.slice(0, -thumbBasename.length) + filename + '.jpg'
+
+          if (data.dstOriginal) {
+            const originalBasename = basename(data.dstOriginal);
+            data.dstOriginal = data.dstOriginal.slice(0, -originalBasename.length) + filename + '.' + getExtension(originalBasename);
+          }
         });
       }
 
     }).then(() => Promise.all([
       resizeAndUpload(img, orientation, data.ContentType, photoScale, data.dstPhoto, 'ONEZONE_IA'),
       resizeAndUpload(img, orientation, 'image/jpeg', thumbScale, data.dstThumb),
+
+      data.saveOriginal ? upload(blob, data.ContentType, data.dstOriginal, 'ONEZONE_IA') : null
     ]).then(() => { }));
   }
 
@@ -342,7 +357,8 @@ S3Album.prototype.deletePhoto = function (photoName, cb) {
     Delete: {
       Objects: [
         { Key: self.__photoPath(photoName) },
-        { Key: self.__thumbPath(photoName) }
+        { Key: self.__thumbPath(photoName) },
+        { Key: self.__originalPath(photoName) }
       ]
     }
   },
@@ -377,7 +393,9 @@ S3Album.prototype.uploadNew = function (file, cb) {
     dstBucket: this.admin.dstBucket.config.params.Bucket,
     dstPhoto: this.__photoPath(file.name),
     dstThumb: this.__thumbPath(file.name),
-    fileNameFromDate: this.admin.config.fileNameFromDate
+    dstOriginal: this.__originalPath(file.name),
+    fileNameFromDate: this.admin.config.fileNameFromDate,
+    saveOriginal: this.admin.config.saveOriginal,
   };
   if (this.photoWidth) data.width = this.photoWidth;
   else if (this.photoHeight) data.height = this.photoHeight;
@@ -405,6 +423,8 @@ var S3AlbumAdmin = function (config) {
 
   if (!self.config.fileNameFromDate)
     self.config.fileNameFromDate = DEFAULT_FILENAME_FROM_DATE;
+  if (!self.config.saveOriginal)
+    self.config.saveOriginal = DEFAULT_SAVE_ORIGINAL;
 
   self.srcBucket = self.config.srcBucket || self.config.bucket;
   self.dstBucket = self.config.dstBucket || self.config.bucket;
