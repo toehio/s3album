@@ -7,6 +7,8 @@ DEFAULT_BUCKET = undefined;
 DEFAULT_SSL_ENABLED = undefined;
 DEFAULT_PHOTO_WIDTH = 1600;
 DEFAULT_THUMB_HEIGHT = 150;
+DEFAULT_FILENAME_FROM_DATE = true;
+DEFAULT_REVERSE_ALBUMS = false;
 
 var settings = {
   /* DON'T CHANGE ANYTHING HERE, YOU *WILL* BE OVERWRITTEN. */
@@ -248,23 +250,49 @@ function resizePhotoWithJS(album, data, cb) {
     );
   }
 
+  function getEXIFDate(blob) {
+    return new Promise(resolve => {
+      EXIF.getData(blob, function () {
+        const exifDate = EXIF.getTag(this, "DateTimeOriginal");
+        if (!exifDate)
+          return resolve(null);
+        resolve(new Date(exifDate.replace(":", "-").replace(":", "-")));
+      });
+    });
+  }
+
   function processBlob(blob) {
-    var img = new Image();
-    img.src = (window.URL || window.webkitURL).createObjectURL(blob);
+    let photoScale, thumbScale, orientation, img;
 
-    return new Promise(resolve =>
+    return new Promise(resolve => {
+      img = new Image();
+      img.src = (window.URL || window.webkitURL).createObjectURL(blob);
       img.onload = () => {
-        const photoScale = getScale(img, data.width, data.height, data.scale);
-        const thumbScale = getScale(img, data.thumbWidth, data.thumbHeight, data.thumbScale);
+        photoScale = getScale(img, data.width, data.height, data.scale);
+        thumbScale = getScale(img, data.thumbWidth, data.thumbHeight, data.thumbScale);
+        resolve();
+      };
+    }).then(
+      () => getOrientation(blob).then(o => orientation = o)
+    ).then(() => {
 
-        getOrientation(blob).then(orientation => {
-          return Promise.all([
-            resizeAndUpload(img, orientation, data.ContentType, photoScale, data.dstPhoto, 'ONEZONE_IA'),
-            resizeAndUpload(img, orientation, 'image/jpeg', thumbScale, data.dstThumb),
-          ]);
-        }).then(() => resolve());
+      if (data.fileNameFromDate) {
+        return getEXIFDate(blob).then(date => {
+          if (!date) return true;
+
+          const filename = date.toISOString().split('.')[0];
+          const photoBasename = basename(data.dstPhoto);
+          data.dstPhoto = data.dstPhoto.slice(0, -photoBasename.length) + filename + '.' + getExtension(photoBasename);
+
+          const thumbBasename = basename(data.dstThumb);
+          data.dstThumb = data.dstThumb.slice(0, -thumbBasename.length) + filename + '.jpg'
+        });
       }
-    );
+
+    }).then(() => Promise.all([
+      resizeAndUpload(img, orientation, data.ContentType, photoScale, data.dstPhoto, 'ONEZONE_IA'),
+      resizeAndUpload(img, orientation, 'image/jpeg', thumbScale, data.dstThumb),
+    ]).then(() => { }));
   }
 
   if (data.srcFile) {
@@ -295,7 +323,8 @@ S3Album.prototype.addPhoto = function (path, cb) {
     dstBucket: this.admin.dstBucket.config.params.Bucket,
     srcImg: path,
     dstPhoto: this.__photoPath(photoName),
-    dstThumb: this.__thumbPath(thumbName)
+    dstThumb: this.__thumbPath(thumbName),
+    fileNameFromDate: this.admin.config.fileNameFromDate
   };
   if (this.photoWidth) data.width = this.photoWidth;
   else if (this.photoHeight) data.height = this.photoHeight;
@@ -347,7 +376,8 @@ S3Album.prototype.uploadNew = function (file, cb) {
     srcFile: file,
     dstBucket: this.admin.dstBucket.config.params.Bucket,
     dstPhoto: this.__photoPath(file.name),
-    dstThumb: this.__thumbPath(file.name)
+    dstThumb: this.__thumbPath(file.name),
+    fileNameFromDate: this.admin.config.fileNameFromDate
   };
   if (this.photoWidth) data.width = this.photoWidth;
   else if (this.photoHeight) data.height = this.photoHeight;
@@ -372,6 +402,9 @@ var S3AlbumAdmin = function (config) {
   if (!self.config.defaultPhotoHeight &&
     !self.config.defaultPhotoWidth && !self.config.defaultPhotoScale)
     self.config.defaultPhotoWidth = DEFAULT_PHOTO_WIDTH || 1600;
+
+  if (!self.config.fileNameFromDate)
+    self.config.fileNameFromDate = DEFAULT_FILENAME_FROM_DATE;
 
   self.srcBucket = self.config.srcBucket || self.config.bucket;
   self.dstBucket = self.config.dstBucket || self.config.bucket;
@@ -841,6 +874,9 @@ $('#albumThumbs').on('click', '.delete-photo', function (e) {
 function updateAlbumList(cb) {
   app.controller.getAlbumNames(function (err, albums) {
     if (err) { if (cb) return cb(err); return showError(err); }
+
+    if (DEFAULT_REVERSE_ALBUMS) albums = albums.reverse();
+
     albums.forEach(function (a) {
       $('#albumList').append('<li><a href="#' + a + '">' + a + '</a></li>');
     });
