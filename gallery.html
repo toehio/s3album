@@ -18,6 +18,7 @@
     SSL_ENABLED = undefined;        // e.g. true
     FORCE_PATH_STYLE = undefined;   // e.g. false
     PREFIX = undefined;             // e.g. 'path/to/albums/root/'
+    REVERSE = undefined;            // e.g. 'path/to/albums/root/'
   </script>
 
   <link href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.5/css/bootstrap.min.css" rel="stylesheet">
@@ -141,6 +142,8 @@
         if (err) { if (cb) return cb(err); throw err; }
 
         $('#albums').empty();
+
+        if(REVERSE) dirs = dirs.reverse();
 
         dirs.forEach(dir => {
           $('#albums').append(`<a href="./view.html#${dir}/">${dir}</a>`);
